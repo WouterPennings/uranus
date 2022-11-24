@@ -1,7 +1,7 @@
-import  { Uranus } from "../uranus.ts";
+import  { UranusHTTP } from "../lib/uranusHTTP.ts";
 
 const port = 3000;
-const app = new Uranus(port);
+const app = new UranusHTTP(port);
 
 app.get("/", async (req, res) => {
   res.text("Yea regular text, I know...")

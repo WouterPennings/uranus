@@ -1,9 +1,12 @@
-export class Uranus {
+type endpointHandler = (request: UranusRequest, response: UranusResponse) => Promise<void>;
+
+export class UranusHTTP {
     private port: Number;
     private listener: any;
 
     private getReqEndPoints: URLCollection;
     private postReqEndPoints: URLCollection;
+    private deleteReqEndPoints: URLCollection;
 
     constructor(port: any) {
         this.port = port;
@@ -11,6 +14,7 @@ export class Uranus {
 
         this.getReqEndPoints = new URLCollection(port);
         this.postReqEndPoints = new URLCollection(port);
+        this.deleteReqEndPoints = new URLCollection(port);
     }
 
     public start(callback = () => {}) {
@@ -18,11 +22,11 @@ export class Uranus {
         callback();
     }
 
-    public get(path: string, handler: (request: UranusRequest, response: UranusResponse) => Promise<void>) {
+    public get(path: string, handler: endpointHandler) {
         this.getReqEndPoints.addURL(path, handler);
     }
 
-    public post(path: string, handler: (request: UranusRequest, response: UranusResponse) => Promise<void>) {
+    public post(path: string, handler: endpointHandler) {
         this.postReqEndPoints.addURL(path, handler);
     }
 
@@ -42,6 +46,9 @@ export class Uranus {
                 case "POST": 
                     this.handlePOSTHTTPRequest(request);
                     break;
+                case "DELETE": 
+                    this.handleDELETEHTTPRequest(request);
+                    break;
                 default: 
                     await request.respondWith(new Response("", {status: 400}));
                     break;
@@ -52,7 +59,7 @@ export class Uranus {
     private async handleGETHTTPRequest(request: Deno.RequestEvent) {
         let requestHandler = this.getReqEndPoints.getHandler(request.request.url);
         if(typeof requestHandler != "boolean") {
-            requestHandler = requestHandler as [(request: UranusRequest, response: UranusResponse) => Promise<void>, {[key: string]: string}];
+            requestHandler = requestHandler as [endpointHandler, {[key: string]: string}];
             const handler = requestHandler[0];
             const parameters = requestHandler[1];
             let req = new UranusRequest(request.request, parameters);
@@ -66,7 +73,21 @@ export class Uranus {
     private async handlePOSTHTTPRequest(request: Deno.RequestEvent) {
         let requestHandler = this.postReqEndPoints.getHandler(request.request.url);
         if(typeof requestHandler != "boolean") {
-            requestHandler = requestHandler as [(request: UranusRequest, response: UranusResponse) => Promise<void>, {[key: string]: string}];
+            requestHandler = requestHandler as [endpointHandler, {[key: string]: string}];
+            const handler = requestHandler[0];
+            const parameters = requestHandler[1];
+            let req = new UranusRequest(request.request, parameters);
+            await req.init();
+            await handler(req, new UranusResponse(request));
+        } else {
+            await request.respondWith(new Response("", {status: 400}));
+        }
+    }
+
+    private async handleDELETEHTTPRequest(request: Deno.RequestEvent) {
+        let requestHandler = this.deleteReqEndPoints.getHandler(request.request.url);
+        if(typeof requestHandler != "boolean") {
+            requestHandler = requestHandler as [endpointHandler, {[key: string]: string}];
             const handler = requestHandler[0];
             const parameters = requestHandler[1];
             let req = new UranusRequest(request.request, parameters);
@@ -78,7 +99,7 @@ export class Uranus {
     }
 } 
 
-export class UranusRequest {
+class UranusRequest {
     private request: Request;
 
     public header: Headers;
@@ -217,7 +238,7 @@ class URL {
 
 class URLCollection {
     private port: number;
-    private URLs: [url: URL, handler: (request: UranusRequest, response: UranusResponse) => Promise<void>][]
+    private URLs: [url: URL, handler: endpointHandler][]
     private domain: string;
 
     constructor(port: number) {
@@ -226,11 +247,11 @@ class URLCollection {
         this.domain = "http://localhost:"+this.port;
     }
 
-    public addURL(url: string, handler: (request: UranusRequest, response: UranusResponse) => Promise<void>) {
+    public addURL(url: string, handler: endpointHandler) {
         this.URLs.push([new URL(url), handler]);
     }
 
-    public getHandler(url: string): boolean | [(request: UranusRequest, response: UranusResponse) => Promise<void>, {[key: string]: string}] {
+    public getHandler(url: string): boolean | [endpointHandler, {[key: string]: string}] {
         const path: string = url.substring(this.domain.length);
 
         for (let i = 0; i < this.URLs.length; i++) {
@@ -238,7 +259,6 @@ class URLCollection {
             if(x[0]) {
                 return [this.URLs[i][1], x[1]];
             }
-            
         }
 
         return true;
@@ -251,7 +271,6 @@ class URLCollection {
             if(x[0]) {
                 return true;
             }
-            
         }
 
         return false;
