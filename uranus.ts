@@ -18,11 +18,11 @@ export class Uranus {
         callback();
     }
 
-    public get(path: string, handler: (request: Req) => Promise<Response>) {
+    public get(path: string, handler: (request: UranusRequest, response: UranusResponse) => Promise<void>) {
         this.getReqEndPoints.addURL(path, handler);
     }
 
-    public post(path: string, handler: (request: Req) => Promise<Response>) {
+    public post(path: string, handler: (request: UranusRequest, response: UranusResponse) => Promise<void>) {
         this.postReqEndPoints.addURL(path, handler);
     }
 
@@ -52,12 +52,12 @@ export class Uranus {
     private async handleGETHTTPRequest(request: Deno.RequestEvent) {
         let requestHandler = this.getReqEndPoints.getHandler(request.request.url);
         if(typeof requestHandler != "boolean") {
-            requestHandler = requestHandler as [(request: Req) => Promise<Response>, {[key: string]: string}];
+            requestHandler = requestHandler as [(request: UranusRequest, response: UranusResponse) => Promise<void>, {[key: string]: string}];
             const handler = requestHandler[0];
             const parameters = requestHandler[1];
-            let req = new Req(request.request, parameters);
+            let req = new UranusRequest(request.request, parameters);
             await req.init();
-            await request.respondWith(await handler(req));
+            await handler(req, new UranusResponse(request));
         } else {
             await request.respondWith(new Response("", {status: 400}));
         }
@@ -66,19 +66,19 @@ export class Uranus {
     private async handlePOSTHTTPRequest(request: Deno.RequestEvent) {
         let requestHandler = this.postReqEndPoints.getHandler(request.request.url);
         if(typeof requestHandler != "boolean") {
-            requestHandler = requestHandler as [(request: Req) => Promise<Response>, {[key: string]: string}];
+            requestHandler = requestHandler as [(request: UranusRequest, response: UranusResponse) => Promise<void>, {[key: string]: string}];
             const handler = requestHandler[0];
             const parameters = requestHandler[1];
-            let req = new Req(request.request, parameters);
+            let req = new UranusRequest(request.request, parameters);
             await req.init();
-            await request.respondWith(await handler(req));
+            await handler(req, new UranusResponse(request));
         } else {
             await request.respondWith(new Response("", {status: 400}));
         }
     }
 } 
 
-export class Req {
+export class UranusRequest {
     private request: Request;
 
     public header: Headers;
@@ -118,30 +118,40 @@ export class Req {
     }
 }
 
-export class Res {
-    public static sendFile(path: string, status = 200): Response {
+class UranusResponse {
+    private request: Deno.RequestEvent;
+
+    constructor(request: Deno.RequestEvent) {
+        this.request = request;
+    }
+
+    public sendFile(path: string, status = 200) {
         const text = Deno.readFileSync(path)
-        return new Response(text, { status });
+        this.doResponse(new Response(text, { status }));
     } 
 
-    public static text(text: string, status = 200): Response {
-        return new Response(text, { status });
+    public text(text: string, status = 200) {
+        this.doResponse(new Response(text, { status }));
     } 
 
-    public static json(json: string | object, status = 200): Response {
+    public json(json: string | object, status = 200) {
         if(typeof json == "string") {
-            return Response.json(JSON.parse(json as string), { status });
+            this.doResponse(Response.json(JSON.parse(json as string), { status }));
         } else {
-            return Response.json(json, { status });
+            this.doResponse(Response.json(json, { status }));
         }
     } 
 
-    public static redirect(text: string, status = 302): Response {
-        return Response.redirect(text, status);
+    public redirect(text: string, status = 302) {
+        this.doResponse(Response.redirect(text, status));
     }
 
-    public static end(status: number): Response {
-        return new Response("", { status })
+    public end(status: number) {
+        this.doResponse(new Response("", { status }));
+    }
+
+    private doResponse(response: Response) {
+        this.request.respondWith(response);
     }
 }
 
@@ -160,7 +170,7 @@ class URLPart {
     }
 }
 
-export class URL {
+class URL {
     public url: string;
     private parts: URLPart[];
 
@@ -207,7 +217,7 @@ export class URL {
 
 class URLCollection {
     private port: number;
-    private URLs: [url: URL, handler: (request: Req) => Promise<Response>][]
+    private URLs: [url: URL, handler: (request: UranusRequest, response: UranusResponse) => Promise<void>][]
     private domain: string;
 
     constructor(port: number) {
@@ -216,11 +226,11 @@ class URLCollection {
         this.domain = "http://localhost:"+this.port;
     }
 
-    public addURL(url: string, handler: (request: Req) => Promise<Response>) {
+    public addURL(url: string, handler: (request: UranusRequest, response: UranusResponse) => Promise<void>) {
         this.URLs.push([new URL(url), handler]);
     }
 
-    public getHandler(url: string): boolean | [(request: Req) => Promise<Response>, {[key: string]: string}] {
+    public getHandler(url: string): boolean | [(request: UranusRequest, response: UranusResponse) => Promise<void>, {[key: string]: string}] {
         const path: string = url.substring(this.domain.length);
 
         for (let i = 0; i < this.URLs.length; i++) {

@@ -1,39 +1,39 @@
-import  { Uranus, Res as Response } from "../uranus.ts";
+import  { Uranus } from "../uranus.ts";
 
 const port = 3000;
 const app = new Uranus(port);
 
-app.get("/", async(req) => {
-  return Response.text("Yea regular text, I know...")
+app.get("/", async (req, res) => {
+  res.text("Yea regular text, I know...")
 });
 
-app.get("/file", async (req) => {
-  return Response.sendFile("index.html");
+app.get("/file", async (req, res) => {
+  res.sendFile("index.html");
 });
 
-app.post("/json/{value}", async (req) => {
-  return Response.json({"value": Number(req.parameters.value)});
+app.post("/json/{value}", async (req, res) => {
+  res.json({"value": Number(req.parameters.value)});
 });
 
-app.post("/body", async (req) => {
-  return Response.text(`This was your body: ${req.body}\nI know kinda crazy`);
+app.post("/body", async (req, res) => {
+  res.text(`This was your body: ${req.body}\nI know kinda crazy`);
 });
 
-app.post("/bodytojson", async (req) => {
-  return Response.json(req.bodyToJSON());
+app.post("/bodytojson", async (req, res) => {
+  res.json(req.bodyToJSON());
 });
 
-app.get('/redirect', async (req) => {
-  return Response.redirect("https://google.com");
+app.get('/redirect', async (req, res) => {
+  res.redirect("https://google.com");
 });
 
-app.get('/end', async (req) => {
-  return Response.end(404);
+app.get('/end', async (req, res) => {
+  res.end(404);
 });
 
-app.get('/person/{name}/blabla', async (req) => {
+app.get('/person/{name}/blabla', async (req, res) => {
   console.log(req.parameters);
-  return Response.text(req.parameters.name);
+  res.text(req.parameters.name);
 });
 
 app.start(() => { console.log(`Listening on ${port}`) });
