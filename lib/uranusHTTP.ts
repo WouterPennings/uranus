@@ -1,21 +1,21 @@
 type endpointHandler = (request: UranusRequest, response: UranusResponse) => Promise<void>;
 
 export class UranusHTTP {
-    private port: Number;
+    public port: Number;
+    
     private listener: any;
-
-    private getReqEndPoints: URLCollection;
-    private postReqEndPoints: URLCollection;
-    private deleteReqEndPoints: URLCollection;
+    private reqEndPoints: Map<string, URLCollection>;
 
     constructor(port: any) {
         this.port = port;
         this.listener = Deno.listen({ port });
 
-        this.getReqEndPoints = new URLCollection(port);
-        this.postReqEndPoints = new URLCollection(port);
-        this.deleteReqEndPoints = new URLCollection(port);
-    }
+        this.reqEndPoints = new Map<string, URLCollection>([
+            ["GET", new URLCollection(port)],
+            ["POST", new URLCollection(port)],
+            ["DELETE", new URLCollection(port)],
+        ])
+    }   
 
     public start(callback = () => {}) {
         this.serve();
@@ -23,11 +23,15 @@ export class UranusHTTP {
     }
 
     public get(path: string, handler: endpointHandler) {
-        this.getReqEndPoints.addURL(path, handler);
+        this.reqEndPoints.get("GET")?.addURL(path, handler);
     }
 
     public post(path: string, handler: endpointHandler) {
-        this.postReqEndPoints.addURL(path, handler);
+        this.reqEndPoints.get("POST")?.addURL(path, handler);
+    }
+
+    public delete(path: string, handler: endpointHandler) {
+        this.reqEndPoints.get("DELETE")?.addURL(path, handler);
     }
 
     private async serve() {
@@ -39,20 +43,10 @@ export class UranusHTTP {
     private async handleHTTPRequest(conn: Deno.Conn) {
         const httpConn = Deno.serveHttp(conn);
         for await (const request of httpConn) {
-            let reqEndPoints = this.getReqEndPoints; // "this.getReqEndPoints;", it just to give variable a value
-            switch(request.request.method) {
-                case "GET": 
-                    reqEndPoints = this.getReqEndPoints;
-                    break; 
-                case "POST": 
-                    reqEndPoints = this.postReqEndPoints;
-                    break;
-                case "DELETE": 
-                    reqEndPoints = this.deleteReqEndPoints;
-                    break;
-                default: 
-                    await request.respondWith(new Response("", {status: 400}));
-                    break;
+            let reqEndPoints = this.reqEndPoints.get(request.request.method);
+            if(reqEndPoints == undefined) {
+                await request.respondWith(new Response("", {status: 404}));
+                return;
             }
 
             let requestHandler = reqEndPoints.getHandler(request.request.url);
@@ -64,7 +58,7 @@ export class UranusHTTP {
                 await req.init();
                 await handler(req, new UranusResponse(request));
             } else {
-                await request.respondWith(new Response("", {status: 400}));
+                await request.respondWith(new Response("", {status: 404}));
             }
         }
     }

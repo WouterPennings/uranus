@@ -36,4 +36,4 @@ app.get('/person/{name}/blabla', async (req, res) => {
   res.text(req.parameters.name);
 });
 
-app.start(() => { console.log(`Listening on ${port}`) });
+app.start(() => { console.log(`Listening on http://localhost:${port}`) });
