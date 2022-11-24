@@ -1,10 +1,12 @@
 type endpointHandler = (request: UranusRequest, response: UranusResponse) => Promise<void>;
+type middelwareHandler = (request: UranusRequest, response: UranusResponse) => Promise<boolean>;
 
 export class UranusHTTP {
     public port: Number;
     
     private listener: any;
     private reqEndPoints: Map<string, URLCollection>;
+    private middlewares: middelwareHandler[];
 
     constructor(port: any) {
         this.port = port;
@@ -14,7 +16,8 @@ export class UranusHTTP {
             ["GET", new URLCollection(port)],
             ["POST", new URLCollection(port)],
             ["DELETE", new URLCollection(port)],
-        ])
+        ]);
+        this.middlewares = [];
     }   
 
     public start(callback = () => {}) {
@@ -32,6 +35,10 @@ export class UranusHTTP {
 
     public delete(path: string, handler: endpointHandler) {
         this.reqEndPoints.get("DELETE")?.addURL(path, handler);
+    }
+
+    public useMiddleware(mw: middelwareHandler) {
+        this.middlewares.push(mw);
     }
 
     private async serve() {
@@ -56,6 +63,12 @@ export class UranusHTTP {
                 const parameters = requestHandler[1];
                 let req = new UranusRequest(request.request, parameters);
                 await req.init();
+
+                for(let mw of this.middlewares) {
+                    const hasResponded = await mw(req, new UranusResponse(request));
+                    if(hasResponded) return;
+                }
+
                 await handler(req, new UranusResponse(request));
             } else {
                 await request.respondWith(new Response("", {status: 404}));
@@ -64,7 +77,7 @@ export class UranusHTTP {
     }
 } 
 
-class UranusRequest {
+export class UranusRequest {
     private request: Request;
 
     public header: Headers;
@@ -104,7 +117,7 @@ class UranusRequest {
     }
 }
 
-class UranusResponse {
+export class UranusResponse {
     private request: Deno.RequestEvent;
 
     constructor(request: Deno.RequestEvent) {

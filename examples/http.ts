@@ -1,7 +1,15 @@
-import  { UranusHTTP } from "../lib/uranusHTTP.ts";
+import  { UranusHTTP, UranusRequest, UranusResponse } from "../lib/uranusHTTP.ts";
+
+const mw = async (req: UranusRequest, res: UranusResponse): Promise<boolean> => {
+  console.log(req.url);
+
+  return false;
+}
 
 const port = 3000;
 const app = new UranusHTTP(port);
+
+app.useMiddleware(mw);
 
 app.get("/", async (req, res) => {
   res.text("Yea regular text, I know...")
