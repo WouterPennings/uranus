@@ -1,15 +1,10 @@
-import  { UranusHTTP, UranusRequest, UranusResponse } from "../lib/uranusHTTP.ts";
-
-const mw = async (req: UranusRequest, res: UranusResponse): Promise<boolean> => {
-  console.log(req.url);
-
-  return false;
-}
+import { UranusHTTP } from "../lib/uranusHTTP.ts";
+import { requestLogger } from "../lib/middelwares.ts";
 
 const port = 3000;
 const app = new UranusHTTP(port);
 
-app.useMiddleware(mw);
+app.useMiddleware(requestLogger);
 
 app.get("/", async (req, res) => {
   res.text("Yea regular text, I know...")
@@ -40,7 +35,6 @@ app.get('/end', async (req, res) => {
 });
 
 app.get('/person/{name}/blabla', async (req, res) => {
-  console.log(req.parameters);
   res.text(req.parameters.name);
 });
 
