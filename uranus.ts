@@ -4,11 +4,17 @@ export class Uranus {
     private getReqEndPointsTwo: {[key: string]: (request: Req) => Promise<Response>}
     private postReqEndPointsTwo: {[key: string]: (request: Req) => Promise<Response>}
 
+    private getReqEndPoints: URLCollection;
+    private postReqEndPoints: URLCollection;
+
     constructor(port: any) {
         this.port = port;
         this.listener = Deno.listen({ port });
         this.getReqEndPointsTwo = {};
         this.postReqEndPointsTwo = {};
+
+        this.getReqEndPoints = new URLCollection(port);
+        this.postReqEndPoints = new URLCollection(port);
     }
 
     public start(callback = () => {}) {
@@ -17,11 +23,13 @@ export class Uranus {
     }
 
     public get(path: string, handler: (request: Req) => Promise<Response>) {
-        this.getReqEndPointsTwo[`http://localhost:${this.port}${path}`] = handler;
+        //this.getReqEndPointsTwo[`http://localhost:${this.port}${path}`] = handler;
+        this.getReqEndPoints.addURL(path, handler);
     }
 
     public post(path: string, handler: (request: Req) => Promise<Response>) {
-        this.postReqEndPointsTwo[`http://localhost:${this.port}${path}`] = handler;
+        //this.postReqEndPointsTwo[`http://localhost:${this.port}${path}`] = handler;
+        this.postReqEndPoints.addURL(path, handler);
     }
 
     private async serve() {
@@ -48,22 +56,28 @@ export class Uranus {
     }
 
     private async handleGETHTTPRequest(request: Deno.RequestEvent) {
-        const requestHandler = this.getReqEndPointsTwo[request.request.url];
-        if(requestHandler != undefined) {
-            let req = new Req(request.request);
+        let requestHandler = this.getReqEndPoints.getHandler(request.request.url);
+        if(typeof requestHandler != "boolean") {
+            requestHandler = requestHandler as [(request: Req) => Promise<Response>, {[key: string]: string}];
+            const handler = requestHandler[0];
+            const parameters = requestHandler[1];
+            let req = new Req(request.request, parameters);
             await req.init();
-            await request.respondWith(await requestHandler(req));
+            await request.respondWith(await handler(req));
         } else {
             await request.respondWith(new Response("", {status: 400}));
         }
     }
 
     private async handlePOSTHTTPRequest(request: Deno.RequestEvent) {
-        const requestHandler = this.postReqEndPointsTwo[request.request.url];
-        if(requestHandler != undefined) {
-            let req = new Req(request.request);
+        let requestHandler = this.postReqEndPoints.getHandler(request.request.url);
+        if(typeof requestHandler != "boolean") {
+            requestHandler = requestHandler as [(request: Req) => Promise<Response>, {[key: string]: string}];
+            const handler = requestHandler[0];
+            const parameters = requestHandler[1];
+            let req = new Req(request.request, parameters);
             await req.init();
-            await request.respondWith(await requestHandler(req));
+            await request.respondWith(await handler(req));
         } else {
             await request.respondWith(new Response("", {status: 400}));
         }
@@ -79,14 +93,14 @@ export class Req {
     public url: string;
     public parameters: {[key: string]: string}
     
-    constructor(request: Request) {
+    constructor(request: Request, parameters: {[key: string]: string}) {
         this.request = request;
 
         this.header = request.headers;
         this.method = request.method;
         this.body = "NOT SUPPOSED TO SEE THIS";
         this.url = request.url;
-        this.parameters = {};
+        this.parameters = parameters;
     } 
 
     // TODO: This should probably happen in the constructor. 
@@ -178,7 +192,7 @@ export class URL {
             } else if(this.parts[i].type == URLPartType.Literal && this.parts[i].value != parts[i]) {
                 return [false, {}];
             }
-        }    
+        }   
         
         return [true, parameters];
     }
@@ -194,7 +208,48 @@ export class URL {
                 this.parts.push(new URLPart(URLPartType.Literal, part));
             }
         });
+    }
+}
 
-        console.log(this.parts);
+class URLCollection {
+    private port: number;
+    private URLs: [url: URL, handler: (request: Req) => Promise<Response>][]
+    private domain: string;
+
+    constructor(port: number) {
+        this.port = port;
+        this.URLs = [];
+        this.domain = "http://localhost:"+this.port;
+    }
+
+    public addURL(url: string, handler: (request: Req) => Promise<Response>) {
+        this.URLs.push([new URL(url), handler]);
+    }
+
+    public getHandler(url: string): boolean | [(request: Req) => Promise<Response>, {[key: string]: string}] {
+        const path: string = url.substring(this.domain.length);
+
+        for (let i = 0; i < this.URLs.length; i++) {
+            const x = this.URLs[i][0].isIdentical(path);
+            if(x[0]) {
+                return [this.URLs[i][1], x[1]];
+            }
+            
+        }
+
+        return true;
+    }
+
+    public handlerExist(url: string): boolean {
+        const path: string = url.substring(this.domain.length);
+        for (let i = 0; i < this.URLs.length; i++) {
+            const x = this.URLs[i][0].isIdentical(path);
+            if(x[0]) {
+                return true;
+            }
+            
+        }
+
+        return false;
     }
 }
