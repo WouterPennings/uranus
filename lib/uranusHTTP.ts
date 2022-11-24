@@ -39,62 +39,33 @@ export class UranusHTTP {
     private async handleHTTPRequest(conn: Deno.Conn) {
         const httpConn = Deno.serveHttp(conn);
         for await (const request of httpConn) {
+            let reqEndPoints = this.getReqEndPoints; // "this.getReqEndPoints;", it just to give variable a value
             switch(request.request.method) {
                 case "GET": 
-                    this.handleGETHTTPRequest(request);
+                    reqEndPoints = this.getReqEndPoints;
                     break; 
                 case "POST": 
-                    this.handlePOSTHTTPRequest(request);
+                    reqEndPoints = this.postReqEndPoints;
                     break;
                 case "DELETE": 
-                    this.handleDELETEHTTPRequest(request);
+                    reqEndPoints = this.deleteReqEndPoints;
                     break;
                 default: 
                     await request.respondWith(new Response("", {status: 400}));
                     break;
             }
-        }
-    }
 
-    private async handleGETHTTPRequest(request: Deno.RequestEvent) {
-        let requestHandler = this.getReqEndPoints.getHandler(request.request.url);
-        if(typeof requestHandler != "boolean") {
-            requestHandler = requestHandler as [endpointHandler, {[key: string]: string}];
-            const handler = requestHandler[0];
-            const parameters = requestHandler[1];
-            let req = new UranusRequest(request.request, parameters);
-            await req.init();
-            await handler(req, new UranusResponse(request));
-        } else {
-            await request.respondWith(new Response("", {status: 400}));
-        }
-    }
-
-    private async handlePOSTHTTPRequest(request: Deno.RequestEvent) {
-        let requestHandler = this.postReqEndPoints.getHandler(request.request.url);
-        if(typeof requestHandler != "boolean") {
-            requestHandler = requestHandler as [endpointHandler, {[key: string]: string}];
-            const handler = requestHandler[0];
-            const parameters = requestHandler[1];
-            let req = new UranusRequest(request.request, parameters);
-            await req.init();
-            await handler(req, new UranusResponse(request));
-        } else {
-            await request.respondWith(new Response("", {status: 400}));
-        }
-    }
-
-    private async handleDELETEHTTPRequest(request: Deno.RequestEvent) {
-        let requestHandler = this.deleteReqEndPoints.getHandler(request.request.url);
-        if(typeof requestHandler != "boolean") {
-            requestHandler = requestHandler as [endpointHandler, {[key: string]: string}];
-            const handler = requestHandler[0];
-            const parameters = requestHandler[1];
-            let req = new UranusRequest(request.request, parameters);
-            await req.init();
-            await handler(req, new UranusResponse(request));
-        } else {
-            await request.respondWith(new Response("", {status: 400}));
+            let requestHandler = reqEndPoints.getHandler(request.request.url);
+            if(typeof requestHandler != "boolean") {
+                requestHandler = requestHandler as [endpointHandler, {[key: string]: string}];
+                const handler = requestHandler[0];
+                const parameters = requestHandler[1];
+                let req = new UranusRequest(request.request, parameters);
+                await req.init();
+                await handler(req, new UranusResponse(request));
+            } else {
+                await request.respondWith(new Response("", {status: 400}));
+            }
         }
     }
 } 
