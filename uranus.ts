@@ -1,8 +1,6 @@
 export class Uranus {
     private port: Number;
     private listener: any;
-    private getReqEndPointsTwo: {[key: string]: (request: Req) => Promise<Response>}
-    private postReqEndPointsTwo: {[key: string]: (request: Req) => Promise<Response>}
 
     private getReqEndPoints: URLCollection;
     private postReqEndPoints: URLCollection;
@@ -10,8 +8,6 @@ export class Uranus {
     constructor(port: any) {
         this.port = port;
         this.listener = Deno.listen({ port });
-        this.getReqEndPointsTwo = {};
-        this.postReqEndPointsTwo = {};
 
         this.getReqEndPoints = new URLCollection(port);
         this.postReqEndPoints = new URLCollection(port);
@@ -23,12 +19,10 @@ export class Uranus {
     }
 
     public get(path: string, handler: (request: Req) => Promise<Response>) {
-        //this.getReqEndPointsTwo[`http://localhost:${this.port}${path}`] = handler;
         this.getReqEndPoints.addURL(path, handler);
     }
 
     public post(path: string, handler: (request: Req) => Promise<Response>) {
-        //this.postReqEndPointsTwo[`http://localhost:${this.port}${path}`] = handler;
         this.postReqEndPoints.addURL(path, handler);
     }
 

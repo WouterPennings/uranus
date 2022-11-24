@@ -1,4 +1,4 @@
-import  { Uranus, Res as Response, URL } from "../uranus.ts";
+import  { Uranus, Res as Response } from "../uranus.ts";
 
 const port = 3000;
 const app = new Uranus(port);
