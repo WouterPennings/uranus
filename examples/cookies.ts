@@ -1,4 +1,4 @@
-import { UranusHTTP, Cookie } from "../lib/uranusHTTP.ts";
+import { UranusHTTP, Cookie } from "../mod.ts";
 
 const port = 3000;
 const app = new UranusHTTP(port);

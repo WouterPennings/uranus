@@ -1,4 +1,4 @@
-import { UranusHTTP } from "../lib/uranusHTTP.ts";
+import { UranusHTTP } from "../mod.ts";
 
 const port = 3000;
 const app = new UranusHTTP(port);

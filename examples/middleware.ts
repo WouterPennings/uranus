@@ -1,5 +1,5 @@
-import { UranusHTTP, UranusRequest, UranusResponse } from "../lib/uranusHTTP.ts";
-import { requestLogger } from "../lib/middelwares.ts";
+import { UranusHTTP, UranusRequest, UranusResponse } from "../mod.ts";
+import { requestLogger } from "../mod.ts";
 
 const port = 3000;
 const app = new UranusHTTP(port);
@@ -26,7 +26,7 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/specific", testMiddleware1, testMiddleware2, async (req, res) => {
-    res.text("Only using the universal middleware");
+    res.text("Also using two middlewares specifically added for this endpoint");
 });
 
 app.start(() => console.log(`Listening on http://localhost:${port}`) );
