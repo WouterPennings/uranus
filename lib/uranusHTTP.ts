@@ -119,7 +119,6 @@ export class UranusRequest {
         }
         for(let c of cookies) {
             let parts= c.trim().split("=");
-            console.log(parts);
             const cookie: Cookie = {
                 name: parts[0],
                 value: parts[1]
@@ -169,7 +168,6 @@ export class UranusResponse {
         }
         for(let c of cookies) {
             let parts= c.trim().split("=");
-            console.log(parts);
             const cookie: Cookie = {
                 name: parts[0],
                 value: parts[1]
@@ -206,12 +204,10 @@ export class UranusResponse {
     }
 
     private doResponse(response: Response) {   
-        console.log(this.cookies);
-
         for(let c of this.cookies) {
             setCookie(response.headers, c[1]);
         }
-
+        // response.headers.set("content-type", "text/html; charset=utf-8");
         if (!this.hasBeenUsed) {
             this.request.respondWith(response);
             this.hasBeenUsed = true;

@@ -12,7 +12,7 @@ app.useMiddleware(requestLogger);
 
 // Return text
 app.get("/", async (req, res) => {
-    res.text("Yea regular text, I know...");
+    res.text("<h1>Hello, World!</h1>");
 });
 
 // Can also return the content of a file
@@ -35,8 +35,6 @@ app.delete("/person/{id}", async (req, res) => {
     if (req.parameters.id == "123") {
         res.text("123");
     }
-
-    res.text("not");
 });
 
 // You can also redirect to a different website

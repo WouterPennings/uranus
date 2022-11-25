@@ -6,6 +6,19 @@ A web framework written in TypeScript for the Deno Runtime. Inspired by
 [ASP.net](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis?view=aspnetcore-7.0).
 Uranus is a minimal and unopinionated web framework for the Deno runtime.
 
+```typescript
+import { UranusHTTP } from "../lib/uranusHTTP.ts";
+
+const port = 3000;
+const app = new UranusHTTP(port);
+
+app.get("/{name}", async (req, res) => {
+    res.text(`<h1>Hello ${req.parameters.name}!</h1>`);
+});
+
+app.start(() => console.log(`Listening on: http://localhost:${port}`));
+```
+
 ## Features
 
 - **HTTP Methods**: GET, POST and DELETE
@@ -14,7 +27,7 @@ Uranus is a minimal and unopinionated web framework for the Deno runtime.
   HTTP request
 - **URL Parameters**: getting values out of the URL
 - **Middlewares**: Universal middlewares executed for all endpoints, and middlewares specified per endpoint.
-- **Response Types:** Multiple ways of responding to a request, think of files,
+- **Response Types**: Multiple ways of responding to a request, think of files,
   JSON or redirecting.
 - **Cookie Support**: Using cookies without touching the HTTP header.
 
@@ -22,6 +35,8 @@ Uranus is a minimal and unopinionated web framework for the Deno runtime.
 
 What features are on the list to be implemented:
 
+- **Support for Files:** In house support for file uploads in requests. And files in the response (I.E. *pdf, *.md).
+  - No need to install third-party dependencies.
 - **Built-in Websockets:** Built-in support for a websockets server.
 
 ## How to use
