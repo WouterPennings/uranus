@@ -1,6 +1,7 @@
-import { UranusHTTP } from "../lib/uranusHTTP.ts";
+import { Cookie, UranusHTTP } from "../lib/uranusHTTP.ts";
 import { requestLogger } from "../lib/middelwares.ts";
 import { testMiddleware, testMiddleware2 } from "./middlewares.ts";
+
 // Port 3000 is the port that this webserver will be hosted on
 const port = 3000;
 // Creating a UranusHTTP instance
@@ -41,6 +42,15 @@ app.delete("/person/{id}", async (req, res) => {
 // You can also redirect to a different website
 app.get("/redirect", async (req, res) => {
     res.redirect("https://google.com");
+});
+
+app.get("/cookies", async (req, res) => {
+    const cookie: Cookie = {
+        name: "ID",
+        value: "123",
+    }
+    res.cookies.set("ID", cookie);
+    res.text("There now is a cookie with the name: 'ID'");
 });
 
 // Starting the webserver with all the endpoints defined above

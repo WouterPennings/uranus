@@ -1,3 +1,7 @@
+import { setCookie, type Cookie as ck } from "https://deno.land/std@0.159.0/http/cookie.ts";
+
+export type Cookie = ck;
+
 type endpointHandler = (
     request: UranusRequest,
     response: UranusResponse,
@@ -72,15 +76,13 @@ export class UranusHTTP {
                 const reqParameters = requestHandler[1];
                 let req = new UranusRequest(request.request, reqParameters);
                 await req.init();
-
+                let res = new UranusResponse(request);
                 for (let mw of this.middlewares) {
-                    let res = new UranusResponse(request);
                     await mw(req, res);
                     if (res.hasBeenUsed) return;
                 }
 
                 for (let handler of reqHandlers) {
-                    let res = new UranusResponse(request);
                     await handler(req, res);
                     if (res.hasBeenUsed) return;
                 }
@@ -93,51 +95,87 @@ export class UranusHTTP {
 
 export class UranusRequest {
     private request: Request;
+    private bodyField: string;
 
-    public header: Headers;
-    public method: string;
-    public body: string;
-    public url: string;
-    public parameters: { [key: string]: string };
+    public readonly header: Headers;
+    public readonly method: string;
+    public readonly url: string;
+    public readonly parameters: { [key: string]: string };
+    public readonly cookies: Map<string, Cookie>;
 
     constructor(request: Request, parameters: { [key: string]: string }) {
         this.request = request;
 
         this.header = request.headers;
         this.method = request.method;
-        this.body = "NOT SUPPOSED TO SEE THIS";
+        this.bodyField = "NOT SUPPOSED TO SEE THIS";
         this.url = request.url;
         this.parameters = parameters;
+        this.cookies = new Map<string, Cookie> ();
+
+        let cookies = request.headers.get("cookie")?.split(';');
+        if(cookies == undefined) {
+            return;
+        }
+        for(let c of cookies) {
+            let parts= c.trim().split("=");
+            console.log(parts);
+            const cookie: Cookie = {
+                name: parts[0],
+                value: parts[1]
+            }
+            this.cookies.set(parts[0], cookie);
+        }
     }
 
     // TODO: This should probably happen in the constructor.
     // But i am a noob with promises
     public async init() {
         let blob = await this.request.blob();
-        this.body = await blob.text();
+        this.bodyField = await blob.text();
     }
 
     public bodyIsJSON(): boolean {
         try {
-            JSON.parse(this.body);
+            JSON.parse(this.bodyField);
             return true;
         } catch {
             return false;
         }
     }
 
+    public body() {
+        return this.bodyField;
+    }
+
     public bodyToJSON(): object {
-        return JSON.parse(this.body);
+        return JSON.parse(this.bodyField);
     }
 }
 
 export class UranusResponse {
     private request: Deno.RequestEvent;
     public hasBeenUsed: boolean;
+    public cookies: Map<string, Cookie>;
 
     constructor(request: Deno.RequestEvent) {
         this.request = request;
         this.hasBeenUsed = false;
+        this.cookies = new Map<string, Cookie> ();
+
+        let cookies = request.request.headers.get("cookie")?.split(';');
+        if(cookies == undefined) {
+            return;
+        }
+        for(let c of cookies) {
+            let parts= c.trim().split("=");
+            console.log(parts);
+            const cookie: Cookie = {
+                name: parts[0],
+                value: parts[1]
+            }
+            this.cookies.set(parts[0], cookie);
+        }
     }
 
     public sendFile(path: string, status = 200) {
@@ -167,7 +205,13 @@ export class UranusResponse {
         this.doResponse(new Response("", { status }));
     }
 
-    private doResponse(response: Response) {
+    private doResponse(response: Response) {   
+        console.log(this.cookies);
+
+        for(let c of this.cookies) {
+            setCookie(response.headers, c[1]);
+        }
+
         if (!this.hasBeenUsed) {
             this.request.respondWith(response);
             this.hasBeenUsed = true;

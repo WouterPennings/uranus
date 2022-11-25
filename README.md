@@ -16,12 +16,12 @@ Uranus is a minimal and unopinionated web framework for the Deno runtime.
 - **Middlewares**: Universal middlewares executed for all endpoints, and middlewares specified per endpoint.
 - **Response Types:** Multiple ways of responding to a request, think of files,
   JSON or redirecting.
+  - **Cookie Support**: Using cookies without touching the HTTP header.
 
 ## Roadmap
 
 What features are on the list to be implemented:
 
-- **Better Cookie Support**: Better support for the use of cookie
 - **Built-in Websockets:** Built-in support for a websockets server.
 
 ## How to use
