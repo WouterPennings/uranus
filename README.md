@@ -35,18 +35,27 @@ app.start(() => console.log(`Listening on: http://localhost:${port}`));
 
 What features are on the list to be implemented:
 
-- **Support for Files:** In house support for file uploads in requests. And files in the response (I.E. *pdf, *.md).
-  - No need to install third-party dependencies.
+- **Support for Files:** Support for file uploads in requests. And files in the response (I.E. *pdf, *.md).
+  - No need to install dependencies.
 - **Built-in Websockets:** Built-in support for a websockets server.
 
 ## How to use
 
 To run an example:
 
-1. `deno run --allow-net --allow-read --allow-write http.ts`
+1. `deno run --allow-net --allow-read --allow-write helloworld.ts`
 
 To import the library:
 
 1. Copy the `uranusHTTP.ts` file to your working directory.
 2. Past this: `import { UranusHTTP } from "./uranusHTTP.ts";` in your `*.ts`
    file.
+
+### Permissions
+
+Currently Uranus 🪐 only uses these Deno permissions:
+- `--allow-net`
+- `--allow-read `
+- `--allow-write`
+
+`--allow-net` is the only permission it will always needs.
