@@ -1,4 +1,3 @@
-import { setCookie } from "https://deno.land/std@0.159.0/http/cookie.ts";
 import { Cookies, Cookie } from "./cookies.ts";
 import { URLCollection } from "./url.ts";
 
@@ -17,11 +16,13 @@ export class UranusHTTP {
     constructor(port: any) {
         this.port = port;
         this.listener = Deno.listen({ port });
-
+        // TODO: HEAD, OPTION, TRACE
         this.reqEndPoints = new Map<string, URLCollection>([
             ["GET", new URLCollection(port)],
             ["POST", new URLCollection(port)],
             ["DELETE", new URLCollection(port)],
+            ["PUT", new URLCollection(port)],
+            ["PATCH", new URLCollection(port)],
         ]);
         this.middlewares = [];
     }
@@ -41,6 +42,14 @@ export class UranusHTTP {
 
     public delete(path: string, ...handler: endpointHandler[]) {
         this.reqEndPoints.get("DELETE")?.addURL(path, handler);
+    }
+
+    public put(path: string, ...handler: endpointHandler[]) {
+        this.reqEndPoints.get("PUT")?.addURL(path, handler);
+    }
+
+    public patch(path: string, ...handler: endpointHandler[]) {
+        this.reqEndPoints.get("PATCH")?.addURL(path, handler);
     }
 
     public useMiddleware(mw: endpointHandler) {
