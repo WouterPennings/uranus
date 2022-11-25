@@ -1,6 +1,6 @@
 import { UranusRequest, UranusResponse } from "./uranusHTTP.ts";
 
-export const requestLogger = async (req: UranusRequest, res: UranusResponse): Promise<boolean> => {
+export const requestLogger = async (req: UranusRequest, res: UranusResponse) => {
     const file = await Deno.open("logger.log", { create: true, write: true, append: true });
     const encoder = new TextEncoder();
     const writer = file.writable.getWriter();
@@ -10,6 +10,4 @@ export const requestLogger = async (req: UranusRequest, res: UranusResponse): Pr
     }); 
     await writer.write(encoder.encode("},\n"));
     file.close();
-  
-    return false;
   }

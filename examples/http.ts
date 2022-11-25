@@ -31,7 +31,11 @@ app.post("/body", async (req, res) => {
 
 // Using a DELETE request
 app.delete('/person/{id}', async (req, res) => {
-  res.text(`Deleted person with id: ${req.parameters.id}`)
+  if(req.parameters.id == "123") {
+    res.text("123");
+  }
+  
+  res.text("not");
 });
 
 // You can also redirect to a different website

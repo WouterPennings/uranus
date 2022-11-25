@@ -1,5 +1,5 @@
 type endpointHandler = (request: UranusRequest, response: UranusResponse) => Promise<void>;
-type middelwareHandler = (request: UranusRequest, response: UranusResponse) => Promise<boolean>;
+type middelwareHandler = (request: UranusRequest, response: UranusResponse) => Promise<void>;
 
 export class UranusHTTP {
     public port: Number;
@@ -65,8 +65,9 @@ export class UranusHTTP {
                 await req.init();
 
                 for(let mw of this.middlewares) {
-                    const hasResponded = await mw(req, new UranusResponse(request));
-                    if(hasResponded) return;
+                    let res = new UranusResponse(request);
+                    await mw(req, res);
+                    if(res.hasBeenUsed) return;
                 }
 
                 await handler(req, new UranusResponse(request));
@@ -119,9 +120,11 @@ export class UranusRequest {
 
 export class UranusResponse {
     private request: Deno.RequestEvent;
+    public hasBeenUsed: boolean;
 
     constructor(request: Deno.RequestEvent) {
         this.request = request;
+        this.hasBeenUsed = false;
     }
 
     public sendFile(path: string, status = 200) {
@@ -150,7 +153,10 @@ export class UranusResponse {
     }
 
     private doResponse(response: Response) {
-        this.request.respondWith(response);
+        if(!this.hasBeenUsed) {
+            this.request.respondWith(response);
+            this.hasBeenUsed = true;
+        }
     }
 }
 
