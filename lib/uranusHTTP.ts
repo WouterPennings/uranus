@@ -1,7 +1,6 @@
-import { setCookie, type Cookie as ck } from "https://deno.land/std@0.159.0/http/cookie.ts";
+import { setCookie } from "https://deno.land/std@0.159.0/http/cookie.ts";
+import { Cookies, Cookie } from "./cookies.ts";
 import { URLCollection } from "./url.ts";
-
-export type Cookie = ck;
 
 export type endpointHandler = (
     request: UranusRequest,
@@ -76,12 +75,12 @@ export class UranusHTTP {
                 let res = new UranusResponse(request);
                 for (let mw of this.middlewares) {
                     await mw(req, res);
-                    if (res.hasBeenUsed) return;
+                    if (res.hasBeenUsed()) return;
                 }
 
                 for (let handler of reqHandlers) {
                     await handler(req, res);
-                    if (res.hasBeenUsed) return;
+                    if (res.hasBeenUsed()) return;
                 }
             } else {
                 await request.respondWith(new Response("", { status: 404 }));
@@ -98,7 +97,7 @@ export class UranusRequest {
     public readonly method: string;
     public readonly url: string;
     public readonly parameters: { [key: string]: string };
-    public readonly cookies: Map<string, Cookie>;
+    public readonly cookies: Cookies;
 
     constructor(request: Request, parameters: { [key: string]: string }) {
         this.request = request;
@@ -108,7 +107,7 @@ export class UranusRequest {
         this.bodyField = "NOT SUPPOSED TO SEE THIS";
         this.url = request.url;
         this.parameters = parameters;
-        this.cookies = new Map<string, Cookie> ();
+        this.cookies = new Cookies();
 
         let cookies = request.headers.get("cookie")?.split(';');
         if(cookies == undefined) {
@@ -116,11 +115,8 @@ export class UranusRequest {
         }
         for(let c of cookies) {
             let parts= c.trim().split("=");
-            const cookie: Cookie = {
-                name: parts[0],
-                value: parts[1]
-            }
-            this.cookies.set(parts[0], cookie);
+            const cookie: Cookie = new Cookie(parts[0], parts[1]);
+            this.cookies.add(cookie);
         }
     }
 
@@ -151,13 +147,13 @@ export class UranusRequest {
 
 export class UranusResponse {
     private request: Deno.RequestEvent;
-    public hasBeenUsed: boolean;
-    public cookies: Map<string, Cookie>;
+    private _hasBeenUsed: boolean;
+    public cookies: Cookies;
 
     constructor(request: Deno.RequestEvent) {
         this.request = request;
-        this.hasBeenUsed = false;
-        this.cookies = new Map<string, Cookie> ();
+        this._hasBeenUsed = false;
+        this.cookies = new Cookies();
 
         let cookies = request.request.headers.get("cookie")?.split(';');
         if(cookies == undefined) {
@@ -165,12 +161,13 @@ export class UranusResponse {
         }
         for(let c of cookies) {
             let parts= c.trim().split("=");
-            const cookie: Cookie = {
-                name: parts[0],
-                value: parts[1]
-            }
-            this.cookies.set(parts[0], cookie);
+            const cookie: Cookie = new Cookie(parts[0], parts[1]);
+            this.cookies.add(cookie);
         }
+    }
+
+    public hasBeenUsed() {
+        return this._hasBeenUsed;
     }
 
     public sendFile(path: string, status = 200) {
@@ -201,13 +198,11 @@ export class UranusResponse {
     }
 
     private doResponse(response: Response) {   
-        for(let c of this.cookies) {
-            setCookie(response.headers, c[1]);
-        }
+        this.cookies.appendToHeaders(response.headers);
         // response.headers.set("content-type", "text/html; charset=utf-8");
-        if (!this.hasBeenUsed) {
+        if (!this._hasBeenUsed) {
             this.request.respondWith(response);
-            this.hasBeenUsed = true;
+            this._hasBeenUsed = true;
         }
     }
 }
