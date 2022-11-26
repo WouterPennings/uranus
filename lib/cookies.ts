@@ -83,8 +83,8 @@ export class Cookies {
         this.cookieCollection.set(cookie.name, cookie);
     }
 
-    public get(cookie: Cookie): Cookie | undefined {
-        return this.cookieCollection.get(cookie.name);
+    public get(cookieName: string): Cookie | undefined {
+        return this.cookieCollection.get(cookieName);
     }
 
     public contains(cookieName: string): boolean {
@@ -96,6 +96,24 @@ export class Cookies {
             return false;
         } else {
             this.cookieCollection.set(cookie.name, cookie);
+            return true;
+        }
+    }
+
+    public updateByKey(key: string, cookie: Cookie): boolean {
+        if(this.cookieCollection.has(key) == false) {
+            return false;
+        } else {
+            this.cookieCollection.set(key, cookie);
+            return true;
+        }
+    }
+
+    public updateValueByKey(key: string, value: string): boolean {
+        if(this.cookieCollection.has(key) == false) {
+            return false;
+        } else {
+            this.cookieCollection.set(key, new Cookie(key, value));
             return true;
         }
     }

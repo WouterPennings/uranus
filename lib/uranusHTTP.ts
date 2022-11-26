@@ -107,6 +107,14 @@ export class UranusRequest {
     public readonly url: string;
     public readonly parameters: { [key: string]: string };
     public readonly cookies: Cookies;
+    /**
+     *  **UNSAFE**
+     * 
+     * This field is empty by default. A field for I.E. middlewares to add data to, think of things, like sessions. 
+     * 
+     * This field however it not type-safe, or in-general safe, since every middleware can mutate this data.
+     */
+    public unsafeData: {[key: string]: any};
 
     constructor(request: Request, parameters: { [key: string]: string }) {
         this.request = request;
@@ -117,6 +125,7 @@ export class UranusRequest {
         this.url = request.url;
         this.parameters = parameters;
         this.cookies = new Cookies();
+        this.unsafeData = {};
 
         let cookies = request.headers.get("cookie")?.split(';');
         if(cookies == undefined) {
@@ -157,12 +166,16 @@ export class UranusRequest {
 export class UranusResponse {
     private request: Deno.RequestEvent;
     private _hasBeenUsed: boolean;
+    private _text: string;
+    private customHeaders: [string, string][];
     public cookies: Cookies;
 
     constructor(request: Deno.RequestEvent) {
         this.request = request;
         this._hasBeenUsed = false;
         this.cookies = new Cookies();
+        this._text = "";
+        this.customHeaders = [];
 
         let cookies = request.request.headers.get("cookie")?.split(';');
         if(cookies == undefined) {
@@ -185,7 +198,16 @@ export class UranusResponse {
     }
 
     public text(text: string, status = 200) {
-        this.doResponse(new Response(text, { status }));
+        this._text += text;
+        this.doResponse(new Response(this._text, { status }));
+    }
+
+    public write(text: string) {
+        this._text += text;
+    }
+
+    public setHeader(key: string, value: string) {
+        this.customHeaders.push([key, value]);
     }
 
     public json(json: string | object, status = 200) {
@@ -208,6 +230,9 @@ export class UranusResponse {
 
     private doResponse(response: Response) {   
         this.cookies.appendToHeaders(response.headers);
+        for(let header of this.customHeaders) {
+            response.headers.append(header[0], header[1]);
+        }
         // response.headers.set("content-type", "text/html; charset=utf-8");
         if (!this._hasBeenUsed) {
             this.request.respondWith(response);
