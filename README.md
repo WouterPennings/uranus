@@ -21,7 +21,7 @@ app.start(() => console.log(`Listening on: http://localhost:${port}`));
 
 ## Features
 
-- **HTTP Methods**: GET, POST and DELETE
+- **HTTP Methods**: GET, POST, DELETE, PUT and PATH
   - More are being implemented.
 - **Body and Header**: Every endpoint has access to the header and body of a
   HTTP request

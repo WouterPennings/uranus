@@ -194,6 +194,7 @@ export class UranusResponse {
 
     public sendFile(path: string, status = 200) {
         const text = Deno.readFileSync(path);
+        this.setHeader('Content-Type', getContentTypeHeader(path));
         this.doResponse(new Response(text, { status }));
     }
 
@@ -238,5 +239,21 @@ export class UranusResponse {
             this.request.respondWith(response);
             this._hasBeenUsed = true;
         }
+    }
+}
+
+const fileExtentionContentType: Map<string, string> = new Map<string, string>([
+    ["txt", "text/html"],
+    ["html", "text/html"],
+    ["pdf", "application/pdf"], 
+]);
+
+function getContentTypeHeader(filepath: string): string {
+    const parts = filepath.split('.');
+    const x = fileExtentionContentType.get(parts[parts.length - 1]);
+    if(x == undefined) {
+        return "text/html";
+    } else {
+        return x;
     }
 }
