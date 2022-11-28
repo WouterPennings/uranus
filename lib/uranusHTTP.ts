@@ -4,6 +4,7 @@ import { URLCollection } from "./url.ts";
 const fileExtentionContentType: Map<string, string> = new Map<string, string>([
     ["txt", "text/html"],
     ["html", "text/html"],
+    ["css", "text/css"],
     ["pdf", "application/pdf"], 
 ]);
 
