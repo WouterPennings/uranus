@@ -95,6 +95,13 @@ export class UranusHTTP {
             // IF static file exists, the file gets send.
             if(this.staticFilesDirectory != undefined) {
                 const path = this.getPathFromURL(request.request.url);
+
+                // A '..' in a path, means that they users are trying to get out of the static files folder
+                // This is a security risks, therefore the check.
+                if(path.includes("..")) {
+                    console.warn(`WARNING: User is trying to get out of the '${this.serveStaticFiles}' folder. Blocker request.`)
+                }
+
                 if(this.pathExists(this.staticFilesDirectory + path)) {
                     let res = new UranusResponse(request);
                     res.sendFile(this.staticFilesDirectory + path);
@@ -110,17 +117,16 @@ export class UranusHTTP {
                     endpointHandler[],
                     { [key: string]: string },
                 ];
-                const reqHandlers = requestHandler[0];
-                const reqParameters = requestHandler[1];
-                let req = new UranusRequest(request.request, reqParameters);
-                await req.init();
+                let req = new UranusRequest(request.request, requestHandler[1]);
                 let res = new UranusResponse(request);
+                await req.init();
+            
                 for (let mw of this.middlewares) {
                     await mw(req, res);
                     if (res.hasBeenUsed()) return;
                 }
 
-                for (let handler of reqHandlers) {
+                for (let handler of requestHandler[0]) {
                     await handler(req, res);
                     if (res.hasBeenUsed()) return;
                 }

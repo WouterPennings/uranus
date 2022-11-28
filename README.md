@@ -30,6 +30,7 @@ app.start(() => console.log(`Listening on: http://localhost:${port}`));
 - **Response Types**: Multiple ways of responding to a request, think of files,
   JSON or redirecting.
 - **Cookie Support**: Using cookies without touching the HTTP header.
+- **Serving Static files**: Serve static file like `.html` with one function call.
 
 ## Roadmap
 
