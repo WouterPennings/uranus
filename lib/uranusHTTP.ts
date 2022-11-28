@@ -1,6 +1,12 @@
 import { Cookies, Cookie } from "./cookies.ts";
 import { URLCollection } from "./url.ts";
 
+const fileExtentionContentType: Map<string, string> = new Map<string, string>([
+    ["txt", "text/html"],
+    ["html", "text/html"],
+    ["pdf", "application/pdf"], 
+]);
+
 export type endpointHandler = (
     request: UranusRequest,
     response: UranusResponse,
@@ -12,6 +18,7 @@ export class UranusHTTP {
     private listener: any;
     private reqEndPoints: Map<string, URLCollection>;
     private middlewares: endpointHandler[];
+    private staticFilesDirectory: string | undefined;
 
     constructor(port: any) {
         this.port = port;
@@ -20,11 +27,12 @@ export class UranusHTTP {
         this.reqEndPoints = new Map<string, URLCollection>([
             ["GET", new URLCollection(port)],
             ["POST", new URLCollection(port)],
-            ["DELETE", new URLCollection(port)],
+        ["DELETE", new URLCollection(port)],
             ["PUT", new URLCollection(port)],
             ["PATCH", new URLCollection(port)],
         ]);
         this.middlewares = [];
+        this.staticFilesDirectory = undefined;
     }
 
     public start(callback = () => {}) {
@@ -56,6 +64,16 @@ export class UranusHTTP {
         this.middlewares.push(mw);
     }
 
+    public serveStaticFiles(directory: string): boolean {
+        // Checks if directory exists ...
+        if(this.pathExists(directory)) {
+            this.staticFilesDirectory = directory;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     private async serve() {
         for await (const conn of this.listener) {
             this.handleHTTPRequest(conn);
@@ -65,12 +83,27 @@ export class UranusHTTP {
     private async handleHTTPRequest(conn: Deno.Conn) {
         const httpConn = Deno.serveHttp(conn);
         for await (const request of httpConn) {
+            // Checks if HTTP methods is suported.
+            // If not, a 404 will be returned.
             let reqEndPoints = this.reqEndPoints.get(request.request.method);
             if (reqEndPoints == undefined) {
                 await request.respondWith(new Response("", { status: 404 }));
                 return;
             }
+            
+            // Sending a static file IF enabled AND file exists ...
+            // IF static file exists, the file gets send.
+            if(this.staticFilesDirectory != undefined) {
+                const path = this.getPathFromURL(request.request.url);
+                if(this.pathExists(this.staticFilesDirectory + path)) {
+                    let res = new UranusResponse(request);
+                    res.sendFile(this.staticFilesDirectory + path);
+                    return;
+                }
+            }
 
+            // Handles the request
+            // First the middlewares, than the endpoint.
             let requestHandler = reqEndPoints.getHandler(request.request.url);
             if (typeof requestHandler != "boolean") {
                 requestHandler = requestHandler as [
@@ -94,6 +127,22 @@ export class UranusHTTP {
             } else {
                 await request.respondWith(new Response("", { status: 404 }));
             }
+        }
+    }
+    
+    private getPathFromURL(URL: string): string {
+        const domain = "http://localhost:" + this.port;
+        const path = URL.substring(domain.length);
+
+        return path;
+    }
+
+    private pathExists(path: string): boolean {
+        try {
+            const _ = Deno.stat(path);
+            return true;
+        } catch(e) {
+            return false;
         }
     }
 }
@@ -194,7 +243,7 @@ export class UranusResponse {
 
     public sendFile(path: string, status = 200) {
         const text = Deno.readFileSync(path);
-        this.setHeader('Content-Type', getContentTypeHeader(path));
+        this.setHeader('Content-Type', this.getContentTypeHeader(path));
         this.doResponse(new Response(text, { status }));
     }
 
@@ -240,20 +289,14 @@ export class UranusResponse {
             this._hasBeenUsed = true;
         }
     }
-}
 
-const fileExtentionContentType: Map<string, string> = new Map<string, string>([
-    ["txt", "text/html"],
-    ["html", "text/html"],
-    ["pdf", "application/pdf"], 
-]);
-
-function getContentTypeHeader(filepath: string): string {
-    const parts = filepath.split('.');
-    const x = fileExtentionContentType.get(parts[parts.length - 1]);
-    if(x == undefined) {
-        return "text/html";
-    } else {
-        return x;
+    private getContentTypeHeader(filepath: string): string {
+        const parts = filepath.split('.');
+        const x = fileExtentionContentType.get(parts[parts.length - 1]);
+        if(x == undefined) {
+            return "text/html";
+        } else {
+            return x;
+        }
     }
 }
