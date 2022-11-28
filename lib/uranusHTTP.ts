@@ -2,9 +2,9 @@ import { Cookies, Cookie } from "./cookies.ts";
 import { URLCollection } from "./url.ts";
 
 const fileExtentionContentType: Map<string, string> = new Map<string, string>([
-    ["txt", "text/html"],
-    ["html", "text/html"],
+    ["html" || "txt", "text/html"],
     ["css", "text/css"],
+    ["js", "text/javascript"],
     ["pdf", "application/pdf"], 
 ]);
 
@@ -28,7 +28,7 @@ export class UranusHTTP {
         this.reqEndPoints = new Map<string, URLCollection>([
             ["GET", new URLCollection(port)],
             ["POST", new URLCollection(port)],
-        ["DELETE", new URLCollection(port)],
+            ["DELETE", new URLCollection(port)],
             ["PUT", new URLCollection(port)],
             ["PATCH", new URLCollection(port)],
         ]);
@@ -103,7 +103,7 @@ export class UranusHTTP {
                     console.warn(`WARNING: User is trying to get out of the '${this.serveStaticFiles}' folder. Blocker request.`)
                 }
 
-                if(this.pathExists(this.staticFilesDirectory + path)) {
+                if(this.fileExists(this.staticFilesDirectory + path)) {
                     let res = new UranusResponse(request);
                     res.sendFile(this.staticFilesDirectory + path);
                     return;
@@ -144,9 +144,19 @@ export class UranusHTTP {
         return path;
     }
 
+    private fileExists(path: string): boolean {
+        try {
+            const _ = Deno.readFileSync(path);
+            return true;
+        } catch(e) {
+            return false;
+        }
+    }
+
     private pathExists(path: string): boolean {
         try {
             const _ = Deno.stat(path);
+            console.log(path);
             return true;
         } catch(e) {
             return false;
