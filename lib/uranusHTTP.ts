@@ -1,4 +1,3 @@
-import { DenoStdInternalError } from "https://deno.land/std@0.159.0/_util/assert.ts";
 import { Cookies, Cookie } from "./cookies.ts";
 import { URLCollection } from "./url.ts";
 
@@ -83,7 +82,7 @@ export class UranusHTTP {
 
     private async serve() {
         for await (const conn of this.listener) {
-            this.handleHTTPRequest(conn);
+            await this.handleHTTPRequest(conn);
         }
     }
 
@@ -95,9 +94,9 @@ export class UranusHTTP {
             let reqEndPoints = this.reqEndPoints.get(request.request.method);
             if (reqEndPoints == undefined) {
                 await request.respondWith(new Response("", { status: 404 }));
-                return;
+                continue;
             }
-            
+
             // Sending a static file IF enabled AND file exists ...
             // IF static file exists, the file gets send.
             if(this.staticFilesDirectory != undefined) {
@@ -112,7 +111,7 @@ export class UranusHTTP {
                 if(this.fileExists(this.staticFilesDirectory + path)) {
                     let res = new UranusResponse(request);
                     res.sendFile(this.staticFilesDirectory + path);
-                    return;
+                    continue;
                 }
             }
 
@@ -124,18 +123,19 @@ export class UranusHTTP {
                     endpointHandler[],
                     { [key: string]: string },
                 ];
+
                 let req = new UranusRequest(request.request, requestHandler[1], conn.remoteAddr);
                 let res = new UranusResponse(request);
                 await req.init();
             
                 for (let mw of this.middlewares) {
                     await mw(req, res);
-                    if (res.hasBeenUsed()) return;
+                    if (res.hasBeenUsed()) continue;
                 }
-
+                
                 for (let handler of requestHandler[0]) {
                     await handler(req, res);
-                    if (res.hasBeenUsed()) return;
+                    if (res.hasBeenUsed()) continue;
                 }
             } else {
                 await request.respondWith(new Response("", { status: 404 }));
@@ -206,9 +206,8 @@ export class UranusRequest {
             return;
         }
         for(let c of cookies) {
-            let parts= c.trim().split("=");
-            const cookie: Cookie = new Cookie(parts[0], parts[1]);
-            this.cookies.add(cookie);
+            let parts = c.trim().split("=");
+            this.cookies.add(parts[0], parts[1]);
         }
     }
 
@@ -258,7 +257,7 @@ export class UranusResponse {
         for(let c of cookies) {
             let parts= c.trim().split("=");
             const cookie: Cookie = new Cookie(parts[0], parts[1]);
-            this.cookies.add(cookie);
+            this.cookies.addCookie(cookie);
         }
     }
 
@@ -295,6 +294,11 @@ export class UranusResponse {
         }
     }
 
+    public html(html: string, status = 200) {
+        this.setHeader('Content-Type', this.getContentTypeHeader("html"));
+        this.doResponse(new Response(html, { status }))
+    }
+
     public redirect(text: string, status = 302) {
         this.doResponse(Response.redirect(text, status));
     }
@@ -308,7 +312,7 @@ export class UranusResponse {
         for(let header of this.customHeaders) {
             response.headers.append(header[0], header[1]);
         }
-        // response.headers.set("content-type", "text/html; charset=utf-8");
+
         if (!this._hasBeenUsed) {
             this.request.respondWith(response);
             this._hasBeenUsed = true;
