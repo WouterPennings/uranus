@@ -1,37 +1,43 @@
-import { setCookie, Cookie as ck } from "https://deno.land/std@0.159.0/http/cookie.ts";
+import {
+    Cookie as ck,
+    setCookie,
+} from "https://deno.land/std@0.159.0/http/cookie.ts";
+
+interface CookieOptions {
+    expires?: Date;
+    maxAge?: number;
+    domain?: string;
+    path?: string;
+    secure?: boolean;
+    httpOnly?: boolean;
+}
 
 export class Cookie {
     public name: string;
     public value: string;
-    public expires?: Date;
-    public maxAge?: number;
-    public domain?: string;
-    public path?: string;
-    public secure?: boolean;
-    public httpOnly?: boolean;
+    public options?: CookieOptions;
 
-    constructor(name: string, value: string, expires?: Date, maxAge?: number, domain?: string, path?: string, secure?: boolean, httpOnly?: boolean) {
+    constructor(
+        name: string,
+        value: string,
+        options?: CookieOptions,
+    ) {
         this.name = name;
         this.value = value;
-        this.expires = expires;
-        this.maxAge = maxAge;
-        this.domain = domain;
-        this.path = path;
-        this.secure = secure;
-        this.httpOnly = httpOnly;
+        this.options = options;
     }
 
     public toDenoCookie(): ck {
         const cookie: ck = {
             name: this.name,
             value: this.value,
-            expires: this.expires,
-            maxAge: this.maxAge,
-            domain: this.domain,
-            path: this.path,
-            secure: this.secure,
-            httpOnly: this.httpOnly,
-        }
+            expires: this.options?.expires,
+            maxAge: this.options?.maxAge,
+            domain: this.options?.domain,
+            path: this.options?.path,
+            secure: this.options?.secure,
+            httpOnly: this.options?.httpOnly,
+        };
 
         return cookie;
     }
@@ -42,30 +48,30 @@ export class Cookies {
 
     constructor(cookies: Cookie[] = []) {
         this.cookieCollection = new Map<string, Cookie>();
-        for(let cookie of cookies) {
+        for (let cookie of cookies) {
             this.cookieCollection.set(cookie.name, cookie);
-        };
+        }
     }
 
     public static fromHeaders(header: Headers): Cookies {
-        let cookiesHeader = header.get("cookie")?.split(';');
-        if(cookiesHeader == undefined) {
+        let cookiesHeader = header.get("cookie")?.split(";");
+        if (cookiesHeader == undefined) {
             return new Cookies();
         }
-    
-        let cookies:Cookie[] = [];
-    
-        for(let c of cookiesHeader) {
-            let parts= c.trim().split("=");
+
+        let cookies: Cookie[] = [];
+
+        for (let c of cookiesHeader) {
+            let parts = c.trim().split("=");
             const cookie: Cookie = new Cookie(parts[0], parts[1]);
             cookies.push(cookie);
         }
-    
+
         return new Cookies(cookies);
     }
 
     public appendToHeaders(header: Headers) {
-        for(let c of this.cookieCollection.values()) {
+        for (let c of this.cookieCollection.values()) {
             setCookie(header, c);
         }
     }
@@ -79,50 +85,36 @@ export class Cookies {
         return keys;
     }
 
-    public add(cookie: Cookie) {
+    public add(key: string, value: string, options?: CookieOptions) {
+        this.cookieCollection.set(key, new Cookie(key, value, options));
+    }
+
+    public addCookie(cookie: Cookie) {
         this.cookieCollection.set(cookie.name, cookie);
     }
 
-    public get(cookieName: string): Cookie | undefined {
-        return this.cookieCollection.get(cookieName);
+    public get(key: string): Cookie | undefined {
+        return this.cookieCollection.get(key);
     }
 
-    public contains(cookieName: string): boolean {
-        return this.cookieCollection.has(cookieName);
-    }
-
-    public update(cookie: Cookie): boolean {
-        if(this.cookieCollection.has(cookie.name) == false) {
+    public update(key: string, value: string, options?: CookieOptions): boolean {
+        if (!this.cookieCollection.has(key)) {
             return false;
         } else {
-            this.cookieCollection.set(cookie.name, cookie);
+            this.cookieCollection.set( key, new Cookie(key, value, options));
             return true;
         }
     }
 
-    public updateByKey(key: string, cookie: Cookie): boolean {
-        if(this.cookieCollection.has(key) == false) {
-            return false;
-        } else {
-            this.cookieCollection.set(key, cookie);
-            return true;
-        }
+    public remove(key: string) {
+        this.cookieCollection.delete(key);
     }
 
-    public updateValueByKey(key: string, value: string): boolean {
-        if(this.cookieCollection.has(key) == false) {
-            return false;
-        } else {
-            this.cookieCollection.set(key, new Cookie(key, value));
-            return true;
-        }
+    public contains(key: string): boolean {
+        return this.cookieCollection.has(key);
     }
 
-    public remove(cookieName: string) {
-        this.cookieCollection.delete(cookieName);
-    }
-
-    public removeAll() {
+    public clear() {
         this.cookieCollection.clear();
     }
 }

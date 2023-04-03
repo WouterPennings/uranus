@@ -41,8 +41,7 @@ export class Sessions {
             }
         } else {
             const uuid = v1.generate() as string;
-            let c = new Cookie(this.cookie_id, uuid);
-            res.cookies.add(c)
+            res.cookies.add(this.cookie_id, uuid)
             
             this.sessions[uuid] = {};
         }
