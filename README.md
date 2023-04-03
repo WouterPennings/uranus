@@ -7,13 +7,13 @@ A web framework written in TypeScript for the Deno Runtime. Inspired by
 Uranus is a minimal and unopinionated web framework for the Deno runtime.
 
 ```typescript
-import { UranusHTTP } from "./mod.ts";
+import { UranusHTTP } from "../mod.ts";
 
 const port = 3000;
 const app = new UranusHTTP(port);
 
 app.get("/{name}", async (req, res) => {
-    res.text(`<h1>Hello ${req.parameters.name}!</h1>`);
+    res.html(`<h1>Hello ${req.parameters.name}!</h1>`);
 });
 
 app.start(() => console.log(`Listening on: http://localhost:${port}`));

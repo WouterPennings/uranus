@@ -3,7 +3,7 @@ import {
     setCookie,
 } from "https://deno.land/std@0.159.0/http/cookie.ts";
 
-interface CookieOptions {
+interface ICookieOptions {
     expires?: Date;
     maxAge?: number;
     domain?: string;
@@ -15,12 +15,12 @@ interface CookieOptions {
 export class Cookie {
     public name: string;
     public value: string;
-    public options?: CookieOptions;
+    public options?: ICookieOptions;
 
     constructor(
         name: string,
         value: string,
-        options?: CookieOptions,
+        options?: ICookieOptions,
     ) {
         this.name = name;
         this.value = value;
@@ -85,7 +85,7 @@ export class Cookies {
         return keys;
     }
 
-    public add(key: string, value: string, options?: CookieOptions) {
+    public add(key: string, value: string, options?: ICookieOptions) {
         this.cookieCollection.set(key, new Cookie(key, value, options));
     }
 
@@ -97,7 +97,7 @@ export class Cookies {
         return this.cookieCollection.get(key);
     }
 
-    public update(key: string, value: string, options?: CookieOptions): boolean {
+    public update(key: string, value: string, options?: ICookieOptions): boolean {
         if (!this.cookieCollection.has(key)) {
             return false;
         } else {
