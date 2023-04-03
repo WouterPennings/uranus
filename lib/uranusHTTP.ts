@@ -1,3 +1,4 @@
+import { DenoStdInternalError } from "https://deno.land/std@0.159.0/_util/assert.ts";
 import { Cookies, Cookie } from "./cookies.ts";
 import { URLCollection } from "./url.ts";
 
@@ -6,12 +7,17 @@ const fileExtentionContentType: Map<string, string> = new Map<string, string>([
     ["css", "text/css"],
     ["js", "text/javascript"],
     ["pdf", "application/pdf"], 
+    ["jpg", "image/jpg"],
+    ["jpeg", "image/jpeg"],
+    ["png", "image/png"],
+    ["gif", "image/gif"],
+    ["svg", "image/svg"],
 ]);
 
 export type endpointHandler = (
     request: UranusRequest,
     response: UranusResponse,
-) => Promise<void>;
+) => Promise<void> | void;
 
 export class UranusHTTP {
     public port: Number;
@@ -118,7 +124,7 @@ export class UranusHTTP {
                     endpointHandler[],
                     { [key: string]: string },
                 ];
-                let req = new UranusRequest(request.request, requestHandler[1]);
+                let req = new UranusRequest(request.request, requestHandler[1], conn.remoteAddr);
                 let res = new UranusResponse(request);
                 await req.init();
             
@@ -173,6 +179,7 @@ export class UranusRequest {
     public readonly url: string;
     public readonly parameters: { [key: string]: string };
     public readonly cookies: Cookies;
+    public readonly remoteAddr: Deno.Addr; 
     /**
      *  **UNSAFE**
      * 
@@ -182,7 +189,7 @@ export class UranusRequest {
      */
     public unsafeData: {[key: string]: any};
 
-    constructor(request: Request, parameters: { [key: string]: string }) {
+    constructor(request: Request, parameters: { [key: string]: string }, remoteAddr: Deno.Addr) {
         this.request = request;
 
         this.header = request.headers;
@@ -191,6 +198,7 @@ export class UranusRequest {
         this.url = request.url;
         this.parameters = parameters;
         this.cookies = new Cookies();
+        this.remoteAddr = remoteAddr;
         this.unsafeData = {};
 
         let cookies = request.headers.get("cookie")?.split(';');
