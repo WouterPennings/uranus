@@ -3,7 +3,7 @@ import { UranusHTTP } from "../mod.ts";
 const port = 3000;
 const app = new UranusHTTP(port);
 
-app.get("/{number}", async (req, res) => {
+app.get("/{number}", (req, res) => {
     res.json({ "number": req.parameters.number });
 });
 

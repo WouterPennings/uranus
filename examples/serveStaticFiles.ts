@@ -6,7 +6,7 @@ const app = new UranusHTTP(port);
 app.serveStaticFiles("public/");
 
 app.get("/", async (req, res) => {
-    res.text("Hello, static files example")
+    res.send("Hello, static files example")
 });
 
 app.start(() => console.log(`Listening on: http://localhost:${port}`));

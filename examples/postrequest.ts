@@ -4,11 +4,11 @@ const port = 3000;
 const app = new UranusHTTP(port);
 
 app.get("/", async (req, res) => {
-    res.text(`<h1>Hello, World!</h1>`);
+    res.send(`<h1>Hello, World!</h1>`);
 });
 
 app.post("/post", async (req, res) => {
-    res.text(req.body());
+    res.send(req.body());
 });
 
 app.post("/postjson", async (req, res) => {
