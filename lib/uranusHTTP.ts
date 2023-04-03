@@ -2,9 +2,10 @@ import { Cookies, Cookie } from "./cookies.ts";
 import { URLCollection } from "./url.ts";
 
 const fileExtentionContentType: Map<string, string> = new Map<string, string>([
-    ["html" || "txt", "text/html"],
+    ["html" || "txt" || "" || undefined || null, "text/html"],
     ["css", "text/css"],
     ["js", "text/javascript"],
+    ["json", "application/json"], 
     ["pdf", "application/pdf"], 
     ["jpg", "image/jpg"],
     ["jpeg", "image/jpeg"],
@@ -162,7 +163,6 @@ export class UranusHTTP {
     private pathExists(path: string): boolean {
         try {
             const _ = Deno.stat(path);
-            console.log(path);
             return true;
         } catch(e) {
             return false;
@@ -240,7 +240,8 @@ export class UranusResponse {
     private request: Deno.RequestEvent;
     private _hasBeenUsed: boolean;
     private _text: string;
-    private customHeaders: [string, string][];
+    private customHeaders: { [key: string]: string };
+    private statusCode: number;
     public cookies: Cookies;
 
     constructor(request: Deno.RequestEvent) {
@@ -248,7 +249,8 @@ export class UranusResponse {
         this._hasBeenUsed = false;
         this.cookies = new Cookies();
         this._text = "";
-        this.customHeaders = [];
+        this.statusCode = 200;
+        this.customHeaders = {};
 
         let cookies = request.request.headers.get("cookie")?.split(';');
         if(cookies == undefined) {
@@ -265,52 +267,64 @@ export class UranusResponse {
         return this._hasBeenUsed;
     }
 
-    public sendFile(path: string, status = 200) {
-        const text = Deno.readFileSync(path);
-        this.setHeader('Content-Type', this.getContentTypeHeader(path));
-        this.doResponse(new Response(text, { status }));
+    public setHeader(header: { [key: string]: string }) {
+        for(const headerKey in header) {
+            this.customHeaders[headerKey] = header[headerKey];
+        }
     }
 
-    public text(text: string, status = 200) {
-        this._text += text;
-        this.doResponse(new Response(this._text, { status }));
+    public status(code: number): UranusResponse {
+        this.statusCode = code;
+        return this;
     }
 
     public write(text: string) {
         this._text += text;
     }
 
-    public setHeader(key: string, value: string) {
-        this.customHeaders.push([key, value]);
+    public send(text: string, header?: { [key: string]: string }) {
+        if(header) this.setHeader(header);
+
+        this._text += text;
+        this.doResponse(new Response(this._text, { status: this.statusCode }));
     }
 
-    public json(json: string | object, status = 200) {
+    public sendFile(path: string, header?: { [key: string]: string }) {
+        if(header) this.setHeader(header);
+
+        const text = Deno.readTextFileSync(path);
+
+        this.setHeader({ 'content-type': this.getContentTypeHeader(path)});
+        this.doResponse(new Response(text, { status: this.statusCode }));
+    }
+
+    public json(json: string | object, header?: { [key: string]: string }) {
+        if(header) this.setHeader(header);
+
         if (typeof json == "string") {
             this.doResponse(
-                Response.json(JSON.parse(json as string), { status }),
+                Response.json(JSON.parse(json as string), { status: this.statusCode }),
             );
         } else {
-            this.doResponse(Response.json(json, { status }));
+            this.doResponse(Response.json(json, { status: this.statusCode }));
         }
     }
 
-    public html(html: string, status = 200) {
-        this.setHeader('Content-Type', this.getContentTypeHeader("html"));
-        this.doResponse(new Response(html, { status }))
+    public redirect(text: string, header?: { [key: string]: string }) {
+        if(header) this.setHeader(header);
+
+        this.doResponse(Response.redirect(text, this.statusCode));
     }
 
-    public redirect(text: string, status = 302) {
-        this.doResponse(Response.redirect(text, status));
-    }
-
-    public end(status: number) {
-        this.doResponse(new Response("", { status }));
+    public end() {
+        this.doResponse(new Response("", { status: this.statusCode }));
     }
 
     private doResponse(response: Response) {   
         this.cookies.appendToHeaders(response.headers);
-        for(let header of this.customHeaders) {
-            response.headers.append(header[0], header[1]);
+
+        for(const headerKeys in this.customHeaders) {
+            response.headers.append(headerKeys, this.customHeaders[headerKeys]);
         }
 
         if (!this._hasBeenUsed) {
@@ -320,12 +334,11 @@ export class UranusResponse {
     }
 
     private getContentTypeHeader(filepath: string): string {
-        const parts = filepath.split('.');
-        const x = fileExtentionContentType.get(parts[parts.length - 1]);
-        if(x == undefined) {
-            return "text/html";
+        const res = fileExtentionContentType.get(filepath.split('.').at(-1) as string);
+        if(res) {
+            return res;
         } else {
-            return x;
+            return "text/html";
         }
     }
 }
