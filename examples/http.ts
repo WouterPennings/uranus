@@ -1,6 +1,5 @@
-import { Cookie, UranusHTTP } from "../lib/uranusHTTP.ts";
+import { UranusHTTP } from "../lib/uranusHTTP.ts";
 import { requestLogger } from "../lib/middelwares.ts";
-import { testMiddleware, testMiddleware2 } from "./middlewares.ts";
 
 // Port 3000 is the port that this webserver will be hosted on
 const port = 3000;
@@ -13,11 +12,6 @@ app.useMiddleware(requestLogger);
 // Return text
 app.get("/", async (req, res) => {
     res.text("<h1>Hello, World!</h1>");
-});
-
-// Can also return the content of a file
-app.get("/file", testMiddleware, testMiddleware2, async (req, res) => {
-    res.sendFile("index.html");
 });
 
 // Returning JSON with a POST request. Also getting parameter from URL
@@ -43,11 +37,7 @@ app.get("/redirect", async (req, res) => {
 });
 
 app.get("/cookies", async (req, res) => {
-    const cookie: Cookie = {
-        name: "ID",
-        value: "123",
-    }
-    res.cookies.set("ID", cookie);
+    res.cookies.add("ID", "123");
     res.text("There now is a cookie with the name: 'ID'");
 });
 
